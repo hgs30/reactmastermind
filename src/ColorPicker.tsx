@@ -1,7 +1,6 @@
 // @ts-ignore
 import styled from "styled-components";
 import Colors from "./model";
-import {wait} from "@testing-library/user-event/dist/utils";
 
 const ColorSelection = styled.button`
   width: 150px;
@@ -13,21 +12,31 @@ const ColorSelection = styled.button`
 const ColorContainer = styled.div`
   display: flex;
   flex-direction: row
+  flex-grow: 2;
 `
 
 type OwnProps = {
-    setCurrentColor: (color: string) => void;
-    increment: () => void;
+    board: string[];
+    setBoard: (board: string[]) => void;
+    row: number;
 }
 
 
 const ColorPicker: React.FC<OwnProps> = (props) => {
 
-    const {setCurrentColor, increment} = props
+    const {board, setBoard, row} = props
 
     const handleClick = (value: string) => {
-        setCurrentColor(value)
-        increment()
+        let inserted: boolean = false;
+        const newBoard = board.map((color, index) => {
+            if (color === "" && !inserted && index < (row * 4 + 4)) {
+                inserted = true
+                return value
+            } else {
+                return color
+            }
+        })
+        setBoard(newBoard)
     }
 
     return (

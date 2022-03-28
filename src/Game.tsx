@@ -4,8 +4,7 @@ import styled from "styled-components";
 import ColorPicker from "./ColorPicker";
 import Header from "./Header";
 import Colors from "./model";
-import {useEffect, useState} from "react";
-import board from "./Board";
+import {useState} from "react";
 
 const DEFAULT_Y = 13
 const DEFAULT_X = 4
@@ -16,7 +15,7 @@ const Main = styled.div`
   align-items: center;
 `
 
-const BackButton = styled.button`
+const StyledButton = styled.button`
   width: 150px;
   height: 150px;
   border-style: solid;
@@ -27,68 +26,94 @@ const BackButton = styled.button`
 
 const Footer = styled.div`
   display: flex;
-  flex-direction: column; 
   align-items: center;
 `
 
-const testSolution = [
-    Colors.green,
-    Colors.blue,
-    Colors.red,
-    Colors.grey
-]
-
 const boardCreator = (length: number, width: number) => {
-    return Array(length)
-        .fill([])
-        .map(() =>
-            Array(width).fill([]).map(() => ""))
+    let board: string[] = [];
+    for (let i=0; i < length * width; i++) {
+        board.push("")
+    }
+    return board;
 }
+
+// @ts-ignore
+const createSolution = (colors: string[]) => {
+    if (colors.length === Object.values(Colors).length - 4) {
+        return []
+    }
+    let shuffled = colors
+        .map(value => ({ value, sort: Math.random() }))
+        .sort((a, b) => a.sort - b.sort)
+        .map(({ value }) => value)
+    return [shuffled.pop()].concat(createSolution(shuffled))
+}
+
 
 const Game: React.FC = () => {
     const [board, setBoard] = useState(boardCreator(DEFAULT_Y, DEFAULT_X));
-    const [xIndex, setXIndex] = useState(0);
-    const [yIndex, setYIndex] = useState(0);
-    const [currentColor, setCurrentColor] = useState("white");
-    const x = DEFAULT_X;
-    const y = DEFAULT_Y;
-
+    const [red, setRed] = useState(boardCreator(DEFAULT_Y, DEFAULT_X));
+    const [white, setWhite] = useState(boardCreator(DEFAULT_Y, DEFAULT_X));
+    const [solution, setSolution] = useState(createSolution(Object.values(Colors)))
+    const [row, setRow] = useState(0)
 
     const handleBackClick = () => {
-        setXIndex((xIndex === 0) ? (yIndex !== y) ? DEFAULT_X : 0 : xIndex - 1);
-        setYIndex((xIndex === 0) ? (yIndex !== y) ? yIndex - 1  : 0: yIndex);
-    }
-
-    const increment = () => {
-        setXIndex((xIndex === x - 1) ? 0 : xIndex + 1);
-        setYIndex((xIndex === x - 1) ? yIndex + 1 : yIndex);
-    }
-
-    useEffect(() => {
-        let newBoard: string[][] = [];
-        for (let i = 0; i < y; i++) {
-            let newRow: string[] = [];
-            for (let j = 0; j < x; j++) {
-                if (j === xIndex && i === yIndex) {
-                    newRow.push(currentColor);
-                } else {
-                    newRow.push(board[i][j]);
-                }
+        let iMinusOne = -1;
+        let inserted: boolean = false;
+        let newBoard = [];
+        for (let i=0; i < board.length; i++) {
+            if (board[i] === "" && !inserted && i > row * 4) {
+                newBoard[iMinusOne] = "";
+                inserted = true
             }
-            newBoard.push(newRow);
+            newBoard.push(board[i])
+            iMinusOne++;
         }
-        setBoard(newBoard);
-    }, [xIndex])
+        setBoard(newBoard)
+    }
+
+    const checkSolution = () => {
+        let solIndex = 0
+        let red: string[] = []
+        let white: string[] = []
+        for (let i = (row * 4); i < (row * 4 + 4); i++) {
+            if (board[i] === solution[solIndex]) {
+                red.push(board[i]);
+            } else if (solution.includes(board[i])) {
+                white.push(board[i]);
+            }
+            solIndex++;
+        }
+        return {red: red, white: white.filter(value => !red.includes(value))}
+    }
+
+    const resetGame = () => {
+        setSolution(createSolution(Object.values(Colors)));
+        setRow(0)
+        setBoard(boardCreator(DEFAULT_Y, DEFAULT_X));
+    }
+
+    const checkRow = () => {
+        const {red, white} = checkSolution()
+        if (red.length === 4) {
+            alert("You won!");
+            resetGame()
+        } else {
+            alert(`Red: ${red.length}, white: ${white.length}`)
+            setRow(row + 1);
+        }
+    }
 
     return (
         <Main style={{display: "flex"}}>
             <header>
-                <Header solution={testSolution}/>
+                <Header solution={solution}/>
             </header>
-            <Board setBoard={setBoard} board={board}/>
+            <Board board={board} red={red} white={white}/>
             <Footer>
-                <ColorPicker setCurrentColor={setCurrentColor} increment={increment}/>
-                <BackButton onClick={handleBackClick}>←</BackButton>
+                <StyledButton onClick={handleBackClick}>Back</StyledButton>
+                <ColorPicker board={board} setBoard={setBoard} row={row}/>
+                <StyledButton onClick={checkRow}>Check</StyledButton>
             </Footer>
         </Main>
     )
